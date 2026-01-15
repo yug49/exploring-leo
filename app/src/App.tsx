@@ -165,7 +165,7 @@ function App() {
         {/* Right Panel - Editor & Output */}
         <div className="w-1/2 flex flex-col">
           {/* Code Editor */}
-          <div className="flex-[2] flex flex-col min-h-0 border-b border-neutral-800">
+          <div className="flex-2 flex flex-col min-h-0 border-b border-neutral-800">
             <div className="flex items-center justify-between px-4 py-2 border-b border-neutral-800">
               <span className="text-xs font-medium text-neutral-400 uppercase tracking-wider">
                 Editor
@@ -187,7 +187,7 @@ function App() {
           </div>
 
           {/* Output Panel */}
-          <div className="flex-1 min-h-[150px]">
+          <div className="flex-1 min-h-37.5">
             <OutputPanel
               result={result}
               error={error}
