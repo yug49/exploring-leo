@@ -1,19 +1,80 @@
 /**
  * LeoExecutor Service
  * 
- * Wraps the Provable SDK to provide a clean interface for executing Leo programs
- * in the browser using WebAssembly.
+ * Executes Leo programs by communicating with the local Leo execution server.
+ * The server runs the Leo CLI to compile and execute programs.
  */
 
 import type { ExecutionResult, LeoExecutionOptions } from '../types';
 
-// Default timeout for execution (30 seconds)
-const DEFAULT_TIMEOUT = 30000;
+// Server configuration
+const SERVER_URL = import.meta.env.VITE_LEO_SERVER_URL || 'http://localhost:3001';
+const DEFAULT_TIMEOUT = 120000; // 120 seconds
+
+// Server health status
+let serverHealthy: boolean | null = null;
+let lastHealthCheck: number = 0;
+const HEALTH_CHECK_INTERVAL = 30000; // 30 seconds
+
+/**
+ * Check if the Leo execution server is running and healthy
+ */
+export async function checkServerHealth(): Promise<{
+  healthy: boolean;
+  leoInstalled: boolean;
+  message: string;
+}> {
+  try {
+    const response = await fetch(`${SERVER_URL}/health`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (!response.ok) {
+      return {
+        healthy: false,
+        leoInstalled: false,
+        message: `Server responded with status ${response.status}`,
+      };
+    }
+
+    const data = await response.json();
+    serverHealthy = data.status === 'healthy';
+    lastHealthCheck = Date.now();
+
+    return {
+      healthy: data.status === 'healthy',
+      leoInstalled: data.leoInstalled ?? false,
+      message: data.message ?? 'Unknown status',
+    };
+  } catch (error) {
+    serverHealthy = false;
+    return {
+      healthy: false,
+      leoInstalled: false,
+      message: `Cannot connect to Leo server at ${SERVER_URL}. Make sure the server is running with 'npm run dev' in the server directory.`,
+    };
+  }
+}
+
+/**
+ * Get cached server health or refresh if stale
+ */
+async function ensureServerHealthy(): Promise<boolean> {
+  // Use cached result if recent
+  if (serverHealthy !== null && Date.now() - lastHealthCheck < HEALTH_CHECK_INTERVAL) {
+    return serverHealthy;
+  }
+
+  const health = await checkServerHealth();
+  return health.healthy;
+}
 
 /**
  * Extract the program name from Leo source code
  */
 function extractProgramName(source: string): string | null {
+  // Leo format: program name.aleo { }
   const match = source.match(/program\s+(\w+)\.aleo\s*\{/);
   return match ? match[1] : null;
 }
@@ -23,90 +84,54 @@ function extractProgramName(source: string): string | null {
  */
 function extractTransitions(source: string): string[] {
   const transitions: string[] = [];
+  
+  // Leo format: transition name(...) or async transition name(...)
   const regex = /(?:async\s+)?transition\s+(\w+)\s*\(/g;
   let match;
   while ((match = regex.exec(source)) !== null) {
     transitions.push(match[1]);
   }
+  
   return transitions;
 }
 
 /**
- * Format error messages to be more user-friendly
+ * Determine error type from error message
  */
-function formatError(error: unknown): string {
-  if (error instanceof Error) {
-    // Clean up common error patterns
-    let message = error.message;
-    
-    // Remove stack traces
-    const stackIndex = message.indexOf('\n    at ');
-    if (stackIndex > -1) {
-      message = message.substring(0, stackIndex);
-    }
-    
-    // Make messages more readable
-    message = message
-      .replace(/Error: /g, '')
-      .replace(/panicked at.*?:/g, '')
-      .trim();
-    
-    return message || 'An unknown error occurred';
+function determineErrorType(error: string): 'compilation' | 'runtime' | 'timeout' {
+  const lowerError = error.toLowerCase();
+  
+  if (lowerError.includes('timed out') || lowerError.includes('timeout')) {
+    return 'timeout';
   }
   
-  if (typeof error === 'string') {
-    return error;
+  if (
+    lowerError.includes('parse') ||
+    lowerError.includes('syntax') ||
+    lowerError.includes('unexpected') ||
+    lowerError.includes('expected') ||
+    lowerError.includes('type') ||
+    lowerError.includes('build failed') ||
+    lowerError.includes('compilation')
+  ) {
+    return 'compilation';
   }
   
-  return 'An unknown error occurred';
+  return 'runtime';
 }
 
 /**
- * Parse compilation errors to extract line and column information
- */
-function parseCompilationError(errorMessage: string): { message: string; line?: number; column?: number } {
-  // Try to extract line/column from error message
-  // Common format: "Error at line X, column Y: message"
-  const lineMatch = errorMessage.match(/line\s*(\d+)/i);
-  const columnMatch = errorMessage.match(/column\s*(\d+)/i);
-  
-  return {
-    message: errorMessage,
-    line: lineMatch ? parseInt(lineMatch[1], 10) : undefined,
-    column: columnMatch ? parseInt(columnMatch[1], 10) : undefined,
-  };
-}
-
-/**
- * Create a promise that rejects after a timeout
- */
-function createTimeoutPromise(ms: number): Promise<never> {
-  return new Promise((_, reject) => {
-    setTimeout(() => {
-      reject(new Error(`Execution timed out after ${ms}ms`));
-    }, ms);
-  });
-}
-
-/**
- * Execute Leo code with the Provable SDK
- * 
- * This function handles:
- * - Loading the WASM modules
- * - Compiling Leo to Aleo instructions
- * - Executing the program
- * - Error handling and formatting
- * - Timeout management
+ * Execute Leo code using the local server
  */
 export async function executeLeoCode(
   source: string,
   options: LeoExecutionOptions = {}
 ): Promise<ExecutionResult> {
-  const { timeout = DEFAULT_TIMEOUT } = options;
+  const { timeout = DEFAULT_TIMEOUT, inputs = [], functionName } = options;
   const startTime = performance.now();
 
   try {
-    // Validate that source code is provided
+    // Validate source code
     if (!source || source.trim() === '') {
       return {
         status: 'error',
@@ -115,7 +140,7 @@ export async function executeLeoCode(
       };
     }
 
-    // Extract program name
+    // Extract program name for validation
     const programName = extractProgramName(source);
     if (!programName) {
       return {
@@ -136,7 +161,7 @@ export async function executeLeoCode(
     }
 
     // Determine which function to execute
-    const functionToRun = options.functionName || transitions[0];
+    const functionToRun = functionName || transitions[0];
     if (!transitions.includes(functionToRun)) {
       return {
         status: 'error',
@@ -145,69 +170,94 @@ export async function executeLeoCode(
       };
     }
 
-    // Dynamic import of the SDK to enable code splitting
-    // Note: We import the SDK to verify it loads correctly
-    // Full execution with proof generation will be added in later phases
-    await import('@provablehq/sdk');
-
-    // Create execution with timeout
-    const executeWithTimeout = async (): Promise<string> => {
-      // Note: The actual execution API depends on the SDK version
-      // This is a simplified version - actual implementation may vary
-      
-      // For now, we'll return a placeholder indicating successful compilation
-      // Full execution requires more SDK setup (keys, proving, etc.)
-      
-      // Compile the program (this validates syntax)
-      // The SDK's Program.fromString would compile the Leo code
-      
-      return `✓ Program "${programName}.aleo" compiled successfully!\n\nTransitions available:\n${transitions.map(t => `  • ${t}`).join('\n')}\n\n[Note: Full execution requires key generation which takes time. In the tutorial, we validate syntax and structure.]`;
-    };
-
-    // Race between execution and timeout
-    const output = await Promise.race([
-      executeWithTimeout(),
-      createTimeoutPromise(timeout),
-    ]);
-
-    const executionTime = performance.now() - startTime;
-
-    return {
-      status: 'success',
-      output,
-      executionTime,
-    };
-
-  } catch (error) {
-    const executionTime = performance.now() - startTime;
-    const formattedError = formatError(error);
-    
-    // Determine if it's a timeout error
-    if (formattedError.includes('timed out')) {
+    // Check server health (use cached if recent)
+    const isHealthy = await ensureServerHealthy();
+    if (!isHealthy) {
       return {
         status: 'error',
-        error: `Execution timed out after ${timeout}ms. The program may be too complex or stuck in an infinite loop.`,
-        errorType: 'timeout',
+        error: `Leo execution server is not available. Make sure the server is running:\n\n  cd server && npm install && npm run dev\n\nThen try again.`,
+        errorType: 'runtime',
+      };
+    }
+
+    // Create abort controller for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+    try {
+      // Send execution request to server
+      const response = await fetch(`${SERVER_URL}/execute`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: source,
+          functionName: functionToRun,
+          inputs,
+          timeout,
+        }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Server error' }));
+        return {
+          status: 'error',
+          error: errorData.error || `Server responded with status ${response.status}`,
+          errorType: errorData.errorType || 'runtime',
+          executionTime: performance.now() - startTime,
+        };
+      }
+
+      const result = await response.json();
+
+      if (result.success) {
+        return {
+          status: 'success',
+          output: result.output || '✓ Program executed successfully',
+          executionTime: result.executionTime || (performance.now() - startTime),
+        };
+      } else {
+        return {
+          status: 'error',
+          error: result.error || 'Execution failed',
+          errorType: result.errorType || determineErrorType(result.error || ''),
+          executionTime: result.executionTime || (performance.now() - startTime),
+        };
+      }
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      
+      if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+        return {
+          status: 'error',
+          error: `Execution timed out after ${timeout / 1000} seconds. The program may be too complex or have an infinite loop.`,
+          errorType: 'timeout',
+          executionTime: timeout,
+        };
+      }
+      
+      throw fetchError;
+    }
+  } catch (error) {
+    const executionTime = performance.now() - startTime;
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+
+    // Check if it's a network error
+    if (errorMessage.includes('fetch') || errorMessage.includes('network') || errorMessage.includes('Failed to fetch')) {
+      return {
+        status: 'error',
+        error: `Cannot connect to Leo server. Make sure the server is running:\n\n  cd server && npm install && npm run dev`,
+        errorType: 'runtime',
         executionTime,
       };
     }
 
-    // Parse the error to extract details
-    const parsedError = parseCompilationError(formattedError);
-    
-    // Determine error type based on message content
-    const isCompilationError = 
-      formattedError.includes('parse') ||
-      formattedError.includes('syntax') ||
-      formattedError.includes('unexpected') ||
-      formattedError.includes('expected') ||
-      formattedError.includes('undefined') ||
-      formattedError.includes('type');
-
     return {
       status: 'error',
-      error: parsedError.message,
-      errorType: isCompilationError ? 'compilation' : 'runtime',
+      error: errorMessage,
+      errorType: determineErrorType(errorMessage),
       executionTime,
     };
   }
@@ -215,7 +265,6 @@ export async function executeLeoCode(
 
 /**
  * Validate Leo code syntax without executing
- * Useful for quick feedback in the editor
  */
 export async function validateLeoSyntax(source: string): Promise<{
   valid: boolean;
@@ -250,19 +299,17 @@ export async function validateLeoSyntax(source: string): Promise<{
       };
     }
 
-    // Basic syntax validation passed
     return {
       valid: true,
       errors: [],
     };
 
   } catch (error) {
-    const formattedError = formatError(error);
-    const parsedError = parseCompilationError(formattedError);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     
     return {
       valid: false,
-      errors: [parsedError],
+      errors: [{ message: errorMessage }],
     };
   }
 }

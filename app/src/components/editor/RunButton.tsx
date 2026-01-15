@@ -28,7 +28,7 @@ export const RunButton: React.FC<RunButtonProps> = ({
         disabled:bg-indigo-600/50 disabled:cursor-not-allowed
         text-white font-medium text-sm
         transition-colors duration-150
-        focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-[var(--color-background)]
+        focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-slate-900
         ${className}
       `}
     >

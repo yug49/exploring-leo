@@ -170,62 +170,82 @@ We initially considered adding this as a feature inside the Leo compiler reposit
 
 ### Code Execution Strategy
 
-Leo code execution happens **entirely in the browser** using WebAssembly (WASM). This means:
-- No backend server is required for code execution
-- The Leo compiler and snarkVM have been compiled to WASM
-- The official Provable SDK provides JavaScript bindings to this WASM
-- All computation happens client-side in the user's browser
+> **Note**: We initially planned to use WebAssembly (WASM) to run Leo code entirely in the browser via the Provable SDK. However, due to limitations and instability with the WASM approach, we switched to a **local server-based execution model**.
 
-This is crucial because it means Exploring Leo can be deployed as a static website with no server costs for execution.
+Leo code execution happens via a **local development server** that uses the Leo CLI:
+- A lightweight Node.js/Express server runs locally alongside the frontend
+- The server receives Leo code, creates a temporary project, and runs `leo build` and `leo run`
+- Results are sent back to the frontend via HTTP API
+- Requires the Leo CLI to be installed on the developer's machine
+
+**Why Local Server Instead of WASM:**
+- The WASM compilation of Leo/snarkVM proved unstable in browser environments
+- Local execution provides more reliable and consistent results
+- Better error messages directly from the Leo CLI
+- Faster iteration during development (no WASM loading overhead)
+
+**Trade-offs:**
+- Users must run the server locally (cannot be a pure static website)
+- Requires Leo CLI installation
+- Better suited for developers learning locally rather than casual web visitors
+
+For production deployment, a hosted server solution could be considered, but for the learning use case, local execution is preferred.
 
 ---
 
 ## 6. Technology Stack
 
-### What is WASM (WebAssembly)
+### Leo CLI (Required)
 
-WebAssembly is a binary instruction format that allows code written in languages like Rust, C, and C++ to run in web browsers at near-native speed. The Leo compiler is written in Rust. Through WASM, this Rust code can be compiled to run inside a web browser, allowing Leo programs to be compiled and executed client-side.
+The Leo CLI is the official command-line compiler and runner for Leo programs. Users must have it installed locally:
+- **Installation Guide**: https://developer.aleo.org/leo/installation
+- Provides `leo build` for compilation and `leo run` for execution
+- Handles all the cryptographic proof generation
 
-### The Provable SDK
+### Local Execution Server
 
-**Repository**: github.com/ProvableHQ/sdk
+A lightweight Node.js/Express server handles code execution:
+- Receives Leo code via HTTP POST requests
+- Creates temporary Leo projects for each execution
+- Runs `leo build` and `leo run` commands
+- Returns compilation/execution results to the frontend
+- Cleans up temporary files after execution
 
-**NPM Package**: @provablehq/sdk
+**Server Stack:**
+- **Runtime**: Node.js 18+
+- **Framework**: Express.js
+- **Language**: TypeScript
+- **Process Execution**: Node.js `child_process` module
 
-The Provable SDK is the official JavaScript/TypeScript SDK for interacting with Leo and the Aleo network. It includes:
-- WASM-compiled Leo compiler and snarkVM
-- JavaScript bindings for program execution
-- Network client for on-chain interactions
-- Account and key management utilities
+### How Execution Works
 
-For Exploring Leo, we primarily use the SDK's ability to compile and execute Leo programs in the browser.
-
-### How the SDK Works
-
-The SDK internally uses @provablehq/wasm which contains the compiled WebAssembly modules. When you call the SDK to execute a Leo program:
-1. The Leo code is parsed and compiled to Aleo instructions
-2. The Aleo instructions are executed by the snarkVM WASM module
-3. Results are returned to JavaScript
-
-All of this happens in the browser without any server communication.
+When a user clicks "Run" in the browser:
+1. The frontend sends the Leo code to `http://localhost:3001/execute`
+2. The server creates a temporary Leo project with the code
+3. The server runs `leo build` to compile the program
+4. If compilation succeeds, the server runs `leo run` with any provided inputs
+5. Output (or errors) are sent back to the frontend
+6. The temporary project is cleaned up
 
 ### Frontend Technology Choices
 
-**Framework**: Vue 3 or React (developer preference) — Both work well for this type of application.
+**Framework**: React 19 — Modern React with hooks for component logic.
 
 **Build Tool**: Vite — Fast development server and optimized production builds.
 
 **Language**: TypeScript — Type safety helps maintain code quality.
 
-**Code Editor**: Monaco Editor — The same editor that powers VS Code, providing syntax highlighting, auto-completion, and a familiar editing experience.
+**Code Editor**: Monaco Editor (@monaco-editor/react) — The same editor that powers VS Code, with custom Leo syntax highlighting.
 
-**Styling**: Tailwind CSS — Utility-first CSS framework for rapid UI development.
+**Styling**: Tailwind CSS v4 — Utility-first CSS framework for rapid UI development.
 
-**Markdown Rendering**: markdown-it or remark — For rendering lesson content which is written in Markdown.
+**Markdown Rendering**: markdown-it — For rendering lesson content which is written in Markdown.
 
-**State Management**: Pinia (for Vue) or Zustand (for React) — For managing application state like current lesson, user progress, and editor content.
+**State Management**: Zustand — Lightweight state management for React.
 
-**Deployment**: Vercel or GitHub Pages — Static site hosting with automatic deployments from Git.
+**Routing**: React Router v7 — For navigating between lessons.
+
+**Deployment**: The frontend can be deployed to Vercel or similar, but requires the local server for code execution during learning.
 
 ---
 
@@ -247,9 +267,9 @@ The project follows a standard modern web application structure:
 
 - **Components**: Reusable UI components organized by feature area. Layout components handle the overall page structure including the sidebar, header, and footer. Editor components handle the code editing interface including the Monaco editor wrapper, output display, and run button. Lesson components display the instructional content including markdown rendering and hints.
 
-- **Composables or Hooks**: Reusable logic for state management and side effects. These handle lesson loading and navigation, Leo code execution via the SDK, progress tracking using browser localStorage, and keyboard shortcuts.
+- **Composables or Hooks**: Reusable logic for state management and side effects. These handle lesson loading and navigation, Leo code execution via the local server, progress tracking using browser localStorage, and keyboard shortcuts.
 
-- **Services**: Business logic separated from UI components. The primary service wraps the Provable SDK to provide a clean interface for executing Leo code.
+- **Services**: Business logic separated from UI components. The primary service communicates with the local Leo execution server to compile and run code.
 
 - **Stores**: Centralized state management for lesson data and user progress.
 
@@ -258,6 +278,14 @@ The project follows a standard modern web application structure:
 - **Utilities**: Helper functions for markdown parsing, localStorage operations, and other common tasks.
 
 - **Router**: Route definitions mapping URLs to lesson content.
+
+- **Workers**: Web worker files (legacy, kept for potential future WASM support).
+
+**Server Directory**: The local execution server (separate from the frontend app):
+
+- **src/**: Server source code in TypeScript
+- **package.json**: Server dependencies (Express, cors, uuid)
+- **tsconfig.json**: TypeScript configuration for the server
 
 **Content Directory**: All lesson content organized by module. Each module is a folder containing multiple lessons. Each lesson consists of a Markdown file for the explanation and Leo files for starter code and solutions.
 
@@ -274,8 +302,8 @@ The project follows a standard modern web application structure:
 **Objective**: Create the foundational project structure and verify the development environment works.
 
 **Tasks**:
-- Initialize a new project using Vite with the TypeScript template for the chosen framework (Vue or React)
-- Install core dependencies including the Provable SDK, Monaco Editor, Tailwind CSS, and markdown parser
+- Initialize a new project using Vite with React and TypeScript template
+- Install core dependencies including Monaco Editor, Tailwind CSS, markdown-it, Zustand, and React Router
 - Set up the basic folder structure as outlined in the project structure section
 - Create a minimal "hello world" page to verify the setup works
 - Configure TypeScript, ESLint, and Prettier for code quality
@@ -283,19 +311,27 @@ The project follows a standard modern web application structure:
 
 **Verification**: The development server runs and displays a basic page.
 
-### Phase 2: SDK Integration
+**Status**: ✅ Completed
 
-**Objective**: Confirm that Leo code can be executed in the browser using the Provable SDK.
+### Phase 2: Server Integration
+
+**Objective**: Create a local server that compiles and runs Leo code using the Leo CLI.
+
+**Background**: We originally planned to use the Provable SDK's WASM compilation to run Leo code directly in the browser. However, this approach proved unreliable, so we switched to a local server-based execution model.
 
 **Tasks**:
-- Create a service wrapper around the Provable SDK
-- Implement a function that accepts Leo source code as a string and returns execution results
+- Create a Node.js/Express server in the `server/` directory
+- Implement an `/execute` endpoint that accepts Leo code, compiles it, and runs it
+- Implement a `/health` endpoint to check if the server and Leo CLI are available
 - Handle compilation errors gracefully with user-friendly messages
 - Handle runtime errors and format them for display
 - Add timeout handling to prevent infinite execution
-- Test with various Leo programs to ensure reliability
+- Clean up temporary project files after each execution
+- Create a frontend service that communicates with the server via HTTP
 
-**Verification**: A simple Leo program can be executed and its output displayed.
+**Verification**: A simple Leo program can be sent to the server and its output returned.
+
+**Status**: ✅ Completed
 
 ### Phase 3: Code Editor Component
 
@@ -602,21 +638,28 @@ Lessons:
 Use this checklist to track progress through development:
 
 ### Foundation
-- [ ] Initialize project with Vite and chosen framework
-- [ ] Install and configure Tailwind CSS
-- [ ] Install Provable SDK
-- [ ] Install Monaco Editor
-- [ ] Set up TypeScript configuration
-- [ ] Create basic folder structure
-- [ ] Initialize Git repository
+- [x] Initialize project with Vite and React
+- [x] Install and configure Tailwind CSS
+- [x] Install Monaco Editor
+- [x] Set up TypeScript configuration
+- [x] Create basic folder structure
+- [x] Initialize Git repository
+
+### Server (NEW - replaces WASM/SDK approach)
+- [x] Create Node.js/Express server
+- [x] Implement /execute endpoint for running Leo code
+- [x] Implement /health endpoint for status checks
+- [x] Handle temporary project creation and cleanup
+- [x] Add timeout handling for execution
+- [x] Create frontend service to communicate with server
 
 ### Core Functionality
-- [ ] Create SDK service wrapper for code execution
-- [ ] Build Monaco Editor component
-- [ ] Implement Run button and output display
-- [ ] Handle compilation errors gracefully
-- [ ] Handle runtime errors gracefully
-- [ ] Add execution timeout handling
+- [x] Create service wrapper for code execution (via server)
+- [x] Build Monaco Editor component with Leo syntax highlighting
+- [x] Implement Run button and output display
+- [x] Handle compilation errors gracefully
+- [x] Handle runtime errors gracefully
+- [x] Add execution timeout handling
 
 ### Lesson System
 - [ ] Design lesson data structure
@@ -630,7 +673,7 @@ Use this checklist to track progress through development:
 - [ ] Build sidebar with module and lesson list
 - [ ] Implement lesson routing
 - [ ] Add prev/next navigation
-- [ ] Create header and footer
+- [x] Create header and footer
 - [ ] Handle direct URL navigation
 
 ### Progress Tracking
@@ -682,13 +725,15 @@ This document captures everything discussed during the planning phase of Explori
 The key decisions made:
 1. This is a web-only project (no CLI or TUI modes)
 2. It lives in its own repository, separate from the Leo compiler
-3. Code execution uses the Provable SDK's WASM capabilities, requiring no backend server
+3. ~~Code execution uses the Provable SDK's WASM capabilities, requiring no backend server~~ **UPDATED**: Code execution uses a local Node.js server that runs the Leo CLI (WASM approach was unreliable)
 4. The UI is inspired by Tour of Go with a two-panel layout
 5. Content is stored as Markdown and Leo files in a structured content directory
 6. Progress is tracked in browser localStorage
+7. **NEW**: Users must have the Leo CLI installed and run the local server for code execution
 
 The project name is **"Exploring Leo"** and should be referred to as such throughout.
 
 ---
 
 *This guide was created in January 2026 to document the complete plan for the Exploring Leo project.*
+*Updated January 2026 to reflect the switch from WASM to local server-based code execution.*

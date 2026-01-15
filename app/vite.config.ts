@@ -6,10 +6,27 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   // Required for WASM support (Provable SDK)
+  assetsInclude: ['**/*.wasm'],
   optimizeDeps: {
     exclude: ['@provablehq/wasm'],
   },
   build: {
     target: 'esnext',
+  },
+  worker: {
+    format: 'es',
+  },
+  // Required headers for SharedArrayBuffer (used by WASM thread pool)
+  server: {
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Embedder-Policy': 'require-corp',
+    },
+  },
+  preview: {
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Embedder-Policy': 'require-corp',
+    },
   },
 })

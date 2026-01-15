@@ -1,1 +1,6 @@
-export { executeLeoCode, validateLeoSyntax, getTransitionInfo } from './leoExecutor';
+export { 
+  executeLeoCode, 
+  validateLeoSyntax, 
+  getTransitionInfo,
+  checkServerHealth 
+} from './leoExecutor';

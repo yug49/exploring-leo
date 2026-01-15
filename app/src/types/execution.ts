@@ -24,10 +24,10 @@ export interface CompilationError {
 }
 
 export interface LeoExecutionOptions {
-  /** Timeout in milliseconds (default: 30000) */
+  /** Timeout in milliseconds (default: 60000) */
   timeout?: number;
   /** Function name to execute */
   functionName?: string;
-  /** Arguments to pass to the function */
-  args?: string[];
+  /** Inputs to pass to the function (e.g., ["5u32", "3u32"]) */
+  inputs?: string[];
 }
