@@ -1,4 +1,4 @@
-# Exploring Leo 🦁
+# Exploring Leo
 
 An interactive web-based tutorial for learning the Leo programming language, inspired by "A Tour of Go".
 
@@ -8,21 +8,21 @@ Leo is an open-source, statically-typed, imperative programming language designe
 
 ## Features
 
-- 📚 **Progressive Lessons** - Learn Leo from basics to advanced topics
-- ✏️ **Interactive Code Editor** - Write and modify Leo code directly in the browser
-- ▶️ **Instant Execution** - Run your code and see results immediately
-- 🎯 **Hands-on Exercises** - Practice what you learn with coding challenges
-- 💾 **Progress Tracking** - Your progress is saved in your browser
-- 🔒 **Privacy-First** - Learn to build applications with built-in privacy using zero-knowledge proofs
+- **Progressive Lessons** - Learn Leo from basics to advanced topics
+- **Interactive Code Editor** - Write and modify Leo code directly in the browser
+- **Instant Execution** - Run your code and see results immediately
+- **Hands-on Exercises** - Practice what you learn with coding challenges
+- **Progress Tracking** - Your progress is saved in your browser
+- **Privacy-First** - Learn to build applications with built-in privacy using zero-knowledge proofs
 
 ## Tech Stack
 
-- **Framework**: React 18 + TypeScript
+- **Framework**: React 19 + TypeScript
 - **Build Tool**: Vite
 - **Styling**: Tailwind CSS
 - **Code Editor**: Monaco Editor
 - **State Management**: Zustand
-- **Leo Execution**: Provable SDK (WASM)
+- **Leo Execution**: Local server with Leo CLI
 
 ## Getting Started
 

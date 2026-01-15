@@ -1,37 +1,37 @@
 {
-  "name": "exploring-leo-server",
-  "version": "1.0.0",
-  "description": "Local server for compiling and executing Leo programs",
-  "main": "dist/index.js",
-  "type": "module",
-  "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "build": "tsc",
-    "start": "node dist/index.js",
-    "clean": "rm -rf dist"
-  },
-  "keywords": [
-    "leo",
-    "aleo",
-    "compiler",
-    "server"
-  ],
-  "author": "",
-  "license": "MIT",
-  "dependencies": {
-    "cors": "^2.8.5",
-    "express": "^5.0.1",
-    "uuid": "^11.1.0"
-  },
-  "devDependencies": {
-    "@types/cors": "^2.8.17",
-    "@types/express": "^5.0.1",
-    "@types/node": "^22.15.2",
-    "@types/uuid": "^10.0.0",
-    "tsx": "^4.19.2",
-    "typescript": "^5.7.3"
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  }
+    "name": "exploring-leo-server",
+    "version": "1.0.0",
+    "description": "Local server for compiling and executing Leo programs",
+    "main": "dist/index.js",
+    "type": "module",
+    "scripts": {
+        "dev": "tsx watch src/index.ts",
+        "build": "tsc",
+        "start": "node dist/index.js",
+        "clean": "rm -rf dist"
+    },
+    "keywords": [
+        "leo",
+        "aleo",
+        "compiler",
+        "server"
+    ],
+    "author": "",
+    "license": "MIT",
+    "dependencies": {
+        "cors": "^2.8.5",
+        "express": "^5.0.1",
+        "uuid": "^11.1.0"
+    },
+    "devDependencies": {
+        "@types/cors": "^2.8.17",
+        "@types/express": "^5.0.1",
+        "@types/node": "^22.15.2",
+        "@types/uuid": "^10.0.0",
+        "tsx": "^4.19.2",
+        "typescript": "^5.7.3"
+    },
+    "engines": {
+        "node": ">=18.0.0"
+    }
 }

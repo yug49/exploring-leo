@@ -284,14 +284,14 @@ app.post('/execute', async (req, res) => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`\n🦁 Leo Execution Server running on http://localhost:${PORT}`);
+  console.log(`\nLeo Execution Server running on http://localhost:${PORT}`);
   
   // Check if Leo is installed
   if (checkLeoInstalled()) {
-    console.log('✅ Leo CLI detected and ready');
+    console.log('[OK] Leo CLI detected and ready');
   } else {
-    console.log('⚠️  Leo CLI not found!');
-    console.log('   Please install it from: https://developer.aleo.org/leo/installation');
+    console.log('[WARNING] Leo CLI not found!');
+    console.log('          Please install it from: https://github.com/ProvableHQ/leo');
   }
   
   console.log('\nEndpoints:');
