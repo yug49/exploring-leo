@@ -67,7 +67,7 @@ export const Header: React.FC<HeaderProps> = ({
               Docs
             </a>
             <a
-              href="https://github.com/ProvableHQ/leo"
+              href="https://github.com/yug49/exploring-leo"
               target="_blank"
               rel="noopener noreferrer"
               className="text-xs text-neutral-400 hover:text-white transition-colors"
