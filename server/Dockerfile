@@ -6,14 +6,14 @@ RUN apt-get update && apt-get install -y \
     curl \
     git \
     build-essential \
+    unzip \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Rust
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-ENV PATH="/root/.cargo/bin:${PATH}"
-
-# Install Leo
-RUN cargo install leo-lang
+# Install Leo from pre-built release
+RUN curl -L https://github.com/ProvableHQ/leo/releases/download/v2.3.0/leo-v2.3.0-x86_64-unknown-linux-gnu.zip -o leo.zip \
+    && unzip leo.zip -d /usr/local/bin \
+    && chmod +x /usr/local/bin/leo \
+    && rm leo.zip
 
 # Install Node.js
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
