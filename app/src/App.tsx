@@ -253,12 +253,14 @@ const lessons = [
       </>
     ),
     code: `program addresses.aleo {
-    transition main(receiver: address) -> address {
+    transition main() -> address {
         // self.caller is the address calling this transition
-        let sender: address = self.caller;
+        let caller: address = self.caller;
         
-        // Return the receiver address
-        return receiver;
+        // self.signer is who signed the transaction
+        let signer: address = self.signer;
+        
+        return caller;
     }
 }`,
   },
@@ -533,7 +535,8 @@ const lessons = [
       </>
     ),
     code: `program conditionals.aleo {
-    transition main(value: u32) -> u32 {
+    transition main() -> u32 {
+        let value: u32 = 42u32;
         let result: u32 = 0u32;
         
         if value < 10u32 {
@@ -572,7 +575,10 @@ const lessons = [
       </>
     ),
     code: `program ternary.aleo {
-    transition main(a: u32, b: u32) -> u32 {
+    transition main() -> u32 {
+        let a: u32 = 25u32;
+        let b: u32 = 10u32;
+        
         // Simple ternary
         let max: u32 = a > b ? a : b;
         let min: u32 = a < b ? a : b;
@@ -779,14 +785,15 @@ const lessons = [
       </>
     ),
     code: `program transitions.aleo {
-    transition main(
-        public visible_input: u32,
-        hidden_input: u32
-    ) -> u32 {
-        // visible_input is public (on-chain)
-        // hidden_input is private (default)
+    // This shows the syntax for public/private inputs
+    // In practice, you'd call with actual inputs
+    
+    transition main() -> u32 {
+        // Demonstrates public vs private concept
+        let visible: u32 = 10u32;  // would be public
+        let hidden: u32 = 5u32;    // would be private
         
-        let result: u32 = visible_input + hidden_input;
+        let result: u32 = visible + hidden;
         return result;
     }
 }`,
@@ -828,7 +835,10 @@ const lessons = [
     }
     
     // Transition calls helper functions
-    transition main(x: u32, y: u32) -> u32 {
+    transition main() -> u32 {
+        let x: u32 = 5u32;
+        let y: u32 = 3u32;
+        
         let sum: u32 = add(x, y);
         let product: u32 = multiply(x, y);
         return sum + product;
@@ -871,7 +881,9 @@ const lessons = [
         return n * square(n);
     }
     
-    transition main(x: u32) -> u32 {
+    transition main() -> u32 {
+        let x: u32 = 4u32;
+        
         let squared: u32 = square(x);
         let cubed: u32 = cube(x);
         return squared + cubed;
@@ -907,14 +919,12 @@ const lessons = [
         amount: u64,
     }
     
-    transition mint(
-        receiver: address,
-        amount: u64
-    ) -> Token {
+    transition mint() -> Token {
         // Create a new token record
+        // The caller becomes the owner
         let token: Token = Token {
-            owner: receiver,
-            amount: amount,
+            owner: self.caller,
+            amount: 1000u64,
         };
         return token;
     }
@@ -956,9 +966,9 @@ const lessons = [
         constant version: u8,
     }
     
-    transition issue(to: address) -> Certificate {
+    transition issue() -> Certificate {
         return Certificate {
-            owner: to,
+            owner: self.caller,
             secret_data: 12345u64,
             issued_date: 20260116u32,
             version: 1u8,
@@ -997,9 +1007,11 @@ const lessons = [
     const MAX_SUPPLY: u64 = 1_000_000u64;
     const FEE_PERCENT: u8 = 5u8;
     
-    transition main(amount: u64) -> u64 {
+    transition main() -> u64 {
         // Local constant
         const MULTIPLIER: u64 = 100u64;
+        
+        let amount: u64 = 500u64;
         
         // Use constants in calculations
         let fee: u64 = amount * FEE_PERCENT as u64 / MULTIPLIER;
@@ -1169,27 +1181,27 @@ const lessons = [
         amount: u64,
     }
     
-    transition transfer(
-        sender_token: Token,
-        receiver: address,
-        amount: u64
-    ) -> (Token, Token) {
-        // Calculate remaining balance
-        let remaining: u64 = sender_token.amount - amount;
-        
-        // Create new token for sender (change)
-        let sender_change: Token = Token {
-            owner: sender_token.owner,
-            amount: remaining,
+    // Mint tokens to the caller
+    transition mint() -> Token {
+        return Token {
+            owner: self.caller,
+            amount: 1000u64,
         };
+    }
+    
+    // Example showing transfer pattern
+    // In practice, you'd pass in a Token record
+    transition example_transfer() -> u64 {
+        // This demonstrates the concept:
+        // 1. Input token is consumed
+        // 2. New tokens created for sender/receiver
+        // 3. Balances must add up
         
-        // Create new token for receiver
-        let receiver_token: Token = Token {
-            owner: receiver,
-            amount: amount,
-        };
+        let original: u64 = 1000u64;
+        let transfer_amount: u64 = 300u64;
+        let remaining: u64 = original - transfer_amount;
         
-        return (sender_change, receiver_token);
+        return remaining;  // 700
     }
 }`,
   },
@@ -1270,13 +1282,9 @@ program imports.aleo {
       </>
     ),
     code: `program assertions.aleo {
-    transition transfer(
-        sender: address,
-        amount: u64,
-        balance: u64
-    ) -> u64 {
-        // Ensure caller is the sender
-        assert_eq(self.caller, sender);
+    transition main() -> u64 {
+        let amount: u64 = 100u64;
+        let balance: u64 = 500u64;
         
         // Ensure sufficient balance
         assert(balance >= amount);
@@ -1284,7 +1292,12 @@ program imports.aleo {
         // Ensure amount is positive
         assert_neq(amount, 0u64);
         
-        return balance - amount;
+        // Equality check
+        let expected: u64 = 400u64;
+        let result: u64 = balance - amount;
+        assert_eq(result, expected);
+        
+        return result;
     }
 }`,
   },
@@ -1370,7 +1383,9 @@ program imports.aleo {
       </>
     ),
     code: `program hashing.aleo {
-    transition main(input: field) -> field {
+    transition main() -> field {
+        let input: field = 123field;
+        
         // Poseidon hash (ZK-friendly)
         let hash1: field = Poseidon2::hash_to_field(input);
         
@@ -1406,9 +1421,13 @@ program imports.aleo {
       </>
     ),
     code: `program commitments.aleo {
-    transition main(secret: field) -> field {
-        // Generate a random salt
-        let salt: scalar = ChaCha::rand_scalar();
+    transition main() -> field {
+        let secret: field = 42field;
+        
+        // Use a fixed salt for demo
+        // In real apps, use ChaCha::rand_scalar()
+        // in async functions
+        let salt: scalar = 123scalar;
         
         // Create a commitment (hides the secret)
         let commitment: field = BHP256::commit_to_field(
@@ -1417,7 +1436,7 @@ program imports.aleo {
         );
         
         // Same secret + different salt = different commitment
-        let salt2: scalar = ChaCha::rand_scalar();
+        let salt2: scalar = 456scalar;
         let commitment2: field = BHP256::commit_to_field(
             secret,
             salt2
@@ -1452,14 +1471,28 @@ program imports.aleo {
       </>
     ),
     code: `program randomness.aleo {
-    transition main() -> u64 {
-        // Generate random values
-        let rand_bool: bool = ChaCha::rand_bool();
+    // ChaCha random functions only work in
+    // async functions (on-chain execution)
+    
+    mapping random_values: u8 => u64;
+    
+    async transition generate() -> Future {
+        return finalize_generate();
+    }
+    
+    async function finalize_generate() {
+        // Generate random values on-chain
         let rand_num: u64 = ChaCha::rand_u64();
-        let rand_field: field = ChaCha::rand_field();
-        let rand_scalar: scalar = ChaCha::rand_scalar();
         
-        return rand_num;
+        // Store it
+        Mapping::set(random_values, 1u8, rand_num);
+    }
+    
+    // For off-chain, use constants or inputs
+    transition main() -> u64 {
+        // Demo without randomness
+        let value: u64 = 42u64;
+        return value;
     }
 }`,
   },
@@ -1545,7 +1578,7 @@ program imports.aleo {
         let signer: address = self.signer;
         
         // This program's address
-        let program: address = self.address;
+        let prog_addr: address = self.address;
         
         return caller;
     }
