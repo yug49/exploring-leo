@@ -76,6 +76,12 @@ function createTempProject(code: string): { projectPath: string; cleanup: () => 
     JSON.stringify(programJson, null, 2)
   );
 
+  // Create .env file with network setting
+  fs.writeFileSync(
+    path.join(projectPath, '.env'),
+    'NETWORK=testnet\nPRIVATE_KEY=APrivateKey1zkpHtqVWT6fSHgUMNxsuVf7eaR6id2cj7TieKY1Z8CP5rCD\n'
+  );
+
   // Write the Leo source code
   fs.writeFileSync(path.join(projectPath, 'src', 'main.leo'), code);
 
