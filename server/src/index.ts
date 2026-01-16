@@ -228,6 +228,10 @@ function formatLeoOutput(output: string): string {
   
   for (const line of lines) {
     const trimmed = line.trim();
+    // Skip constraint info lines
+    if (trimmed.includes('constraints') || trimmed.includes('called')) {
+      continue;
+    }
     // Extract value after bullet point (• value)
     if (trimmed.startsWith('•')) {
       const value = trimmed.substring(1).trim();

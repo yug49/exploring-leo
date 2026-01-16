@@ -25,10 +25,10 @@ const lessons = [
           <strong>What makes Leo special:</strong>
         </p>
         <ul className="mt-2">
-          <li>✨ <strong>Privacy by default</strong> — inputs are private unless explicitly made public</li>
-          <li>🔐 <strong>Zero-knowledge proofs</strong> — verify computations without revealing data</li>
-          <li>📝 <strong>Statically typed</strong> — catch errors at compile time</li>
-          <li>🚀 <strong>Developer friendly</strong> — familiar syntax inspired by Rust</li>
+          <li><strong>Privacy by default</strong> — inputs are private unless explicitly made public</li>
+          <li><strong>Zero-knowledge proofs</strong> — verify computations without revealing data</li>
+          <li><strong>Statically typed</strong> — catch errors at compile time</li>
+          <li><strong>Developer friendly</strong> — familiar syntax inspired by Rust</li>
         </ul>
         <p className="mt-4">
           Use the <strong>Next</strong> button below to progress through the lessons. Let's begin!
@@ -103,8 +103,8 @@ const lessons = [
         // Explicit type annotation
         let a: u32 = 5u32;
         
-        // Type inferred from value
-        let b = 10u32;
+        // Type must be explicit in Leo
+        let b: u32 = 10u32;
         
         // Variables can be reassigned
         let c: u32 = a + b;
@@ -332,20 +332,20 @@ const lessons = [
       </>
     ),
     code: `program options.aleo {
+    // Note: Option types use special syntax
+    // This demo shows basic operations
+    
     transition main() -> u32 {
-        // Option with a value
-        let some_value: u32? = 42u32;
+        // In Leo, options are handled differently
+        // Using regular values for this demo
+        let value: u32 = 42u32;
+        let default_val: u32 = 100u32;
         
-        // Option with no value
-        let no_value: u32? = none;
+        // Conditional logic instead of Option
+        let use_default: bool = false;
+        let result: u32 = use_default ? default_val : value;
         
-        // Unwrap (will fail if none)
-        let val1: u32 = some_value.unwrap();
-        
-        // Unwrap with default fallback
-        let val2: u32 = no_value.unwrap_or(100u32);
-        
-        return val1 + val2;
+        return result;
     }
 }`,
   },
@@ -494,12 +494,12 @@ const lessons = [
     ),
     code: `program bitwise.aleo {
     transition main() -> u8 {
-        let a: u8 = 0b1010u8;  // 10 in binary
-        let b: u8 = 0b1100u8;  // 12 in binary
+        let a: u8 = 10u8;  // 0b1010 in binary
+        let b: u8 = 12u8;  // 0b1100 in binary
         
-        let and_result: u8 = a & b;   // 0b1000 = 8
-        let or_result: u8 = a | b;    // 0b1110 = 14
-        let xor_result: u8 = a ^ b;   // 0b0110 = 6
+        let and_result: u8 = a & b;   // 8  (0b1000)
+        let or_result: u8 = a | b;    // 14 (0b1110)
+        let xor_result: u8 = a ^ b;   // 6  (0b0110)
         
         // Shift operations
         let left: u8 = a << 1u8;      // 20
@@ -825,23 +825,18 @@ const lessons = [
       </>
     ),
     code: `program helpers.aleo {
-    // Helper function - internal only
-    function add(a: u32, b: u32) -> u32 {
+    // Helper function (internal only)
+    function add_numbers(a: u32, b: u32) -> u32 {
         return a + b;
     }
     
-    function multiply(a: u32, b: u32) -> u32 {
-        return a * b;
-    }
-    
-    // Transition calls helper functions
+    // Transition calls helper function
     transition main() -> u32 {
         let x: u32 = 5u32;
         let y: u32 = 3u32;
         
-        let sum: u32 = add(x, y);
-        let product: u32 = multiply(x, y);
-        return sum + product;
+        let sum: u32 = add_numbers(x, y);
+        return sum;
     }
 }`,
   },
@@ -1509,7 +1504,6 @@ program imports.aleo {
         </p>
         <ul className="mt-2">
           <li><code>block.height</code> — current block number (u32)</li>
-          <li><code>block.timestamp</code> — Unix timestamp in seconds (i64)</li>
         </ul>
         <p className="mt-4">
           <strong>Use cases:</strong>
@@ -1525,22 +1519,26 @@ program imports.aleo {
       </>
     ),
     code: `program block_context.aleo {
-    // Note: block.height and block.timestamp
-    // are only available in async functions
+    // Note: block.height is only available
+    // in async functions (on-chain)
     
-    mapping timestamps: u32 => i64;
+    mapping heights: u8 => u32;
     
-    async transition record_time() -> Future {
+    async transition record_height() -> Future {
         return finalize_record();
     }
     
     async function finalize_record() {
-        // Get current block info
+        // Get current block height
         let height: u32 = block.height;
-        let time: i64 = block.timestamp;
         
-        // Store the timestamp
-        Mapping::set(timestamps, height, time);
+        // Store the height
+        Mapping::set(heights, 1u8, height);
+    }
+    
+    // Simple transition for demo
+    transition main() -> u32 {
+        return 100u32;
     }
 }`,
   },
