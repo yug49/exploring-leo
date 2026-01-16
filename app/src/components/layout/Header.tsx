@@ -91,25 +91,50 @@ export const Header: React.FC<HeaderProps> = ({
 
               {/* Dropdown Menu */}
               {menuOpen && (
-                <div className="absolute right-0 top-full mt-2 w-64 bg-[#171717] border border-neutral-800 rounded-lg shadow-xl z-50">
+                <div className="absolute right-0 top-full mt-2 bg-[#171717] border border-neutral-800 rounded-lg shadow-xl z-50" style={{ width: '540px' }}>
                   <div className="py-2">
                     <div className="px-4 py-2 text-xs font-medium text-neutral-500 uppercase tracking-wider border-b border-neutral-800">
                       Lessons
                     </div>
-                    {lessons.map((lesson, index) => (
-                      <button
-                        key={index}
-                        onClick={() => handleNavigate(index)}
-                        className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
-                          index === currentLesson
-                            ? 'bg-[#00ffc8]/10 text-[#00ffc8]'
-                            : 'text-neutral-300 hover:bg-neutral-800 hover:text-white'
-                        }`}
-                      >
-                        <span className="text-neutral-500 mr-2">{index + 1}.</span>
-                        {lesson.title}
-                      </button>
-                    ))}
+                    <div className="flex">
+                      {/* Left Column - First half of lessons */}
+                      <div className="flex-1 border-r border-neutral-800">
+                        {lessons.slice(0, Math.ceil(lessons.length / 2)).map((lesson, index) => (
+                          <button
+                            key={index}
+                            onClick={() => handleNavigate(index)}
+                            className={`w-full text-left px-4 py-2 text-sm transition-colors ${
+                              index === currentLesson
+                                ? 'bg-[#00ffc8]/10 text-[#00ffc8]'
+                                : 'text-neutral-300 hover:bg-neutral-800 hover:text-white'
+                            }`}
+                          >
+                            <span className="text-neutral-500 mr-2">{index + 1}.</span>
+                            {lesson.title}
+                          </button>
+                        ))}
+                      </div>
+                      {/* Right Column - Second half of lessons */}
+                      <div className="flex-1">
+                        {lessons.slice(Math.ceil(lessons.length / 2)).map((lesson, index) => {
+                          const actualIndex = index + Math.ceil(lessons.length / 2);
+                          return (
+                            <button
+                              key={actualIndex}
+                              onClick={() => handleNavigate(actualIndex)}
+                              className={`w-full text-left px-4 py-2 text-sm transition-colors ${
+                                actualIndex === currentLesson
+                                  ? 'bg-[#00ffc8]/10 text-[#00ffc8]'
+                                  : 'text-neutral-300 hover:bg-neutral-800 hover:text-white'
+                              }`}
+                            >
+                              <span className="text-neutral-500 mr-2">{actualIndex + 1}.</span>
+                              {lesson.title}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}

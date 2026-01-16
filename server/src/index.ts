@@ -212,27 +212,28 @@ function formatLeoOutput(output: string): string {
   // Remove ANSI color codes
   const cleanOutput = output.replace(/\x1b\[[0-9;]*m/g, '');
   
-  // Extract the relevant output (typically after "Output" or results)
+  // Extract just the output value (e.g., "3field" from "• 3field")
   const lines = cleanOutput.split('\n');
-  const relevantLines: string[] = [];
-  let capturing = false;
+  const outputValues: string[] = [];
   
   for (const line of lines) {
-    // Start capturing after we see output indicators
-    if (line.includes('Output') || line.includes('Result') || line.includes('•')) {
-      capturing = true;
-    }
-    if (capturing && line.trim()) {
-      relevantLines.push(line);
+    const trimmed = line.trim();
+    // Extract value after bullet point (• value)
+    if (trimmed.startsWith('•')) {
+      const value = trimmed.substring(1).trim();
+      if (value) {
+        outputValues.push(value);
+      }
     }
   }
   
-  // If we didn't find specific output markers, return the whole thing
-  if (relevantLines.length === 0) {
-    return cleanOutput;
+  // Return just the output values, one per line
+  if (outputValues.length > 0) {
+    return outputValues.join('\n');
   }
   
-  return relevantLines.join('\n');
+  // Fallback: return cleaned output if no bullet points found
+  return cleanOutput.trim();
 }
 
 // API Routes
