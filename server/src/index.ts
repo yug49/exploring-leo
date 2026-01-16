@@ -79,7 +79,7 @@ function createTempProject(code: string): { projectPath: string; cleanup: () => 
   // Create .env file with network setting
   fs.writeFileSync(
     path.join(projectPath, '.env'),
-    'NETWORK=testnet\nPRIVATE_KEY=APrivateKey1zkpHtqVWT6fSHgUMNxsuVf7eaR6id2cj7TieKY1Z8CP5rCD\n'
+    'NETWORK=testnet\nPRIVATE_KEY=APrivateKey1zkpHtqVWT6fSHgUMNxsuVf7eaR6id2cj7TieKY1Z8CP5rCD\nENDPOINT=https://api.explorer.provable.com/v1\n'
   );
 
   // Write the Leo source code
